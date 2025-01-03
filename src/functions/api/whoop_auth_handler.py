@@ -99,10 +99,37 @@ def fetch_whoop_data(access_token):
 
 # Generate the authorization URL
 def generate_auth_url():
+    scopes = "offline%20read:profile%20read:cycles"
     return (
         f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
-        f"&scope=offline%20read:profile&state={STATE}"
+        f"&scope={scopes}&state={STATE}"
     )
+
+def validate_access_token(access_token):
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(DATA_ENDPOINT, headers=headers)
+    if response.status_code == 401:
+        raise ValueError("Access token is invalid or expired. Please reauthorize.")
+    response.raise_for_status()
+    print("Access token validated successfully.")
+
+def get_whoop_access_token():
+    access_token = None
+    try:
+        refresh_token = get_refresh_token()
+        print("Refresh token found. Using refresh token to get access token.")
+        access_token = refresh_access_token()
+    except ValueError:
+        # No refresh token found
+        print("No refresh token found. Starting authorization code flow.")
+        print("Generate an authorization URL and paste it into your browser:")
+        print(generate_auth_url())
+        auth_code = input("Enter the authorization code from WHOOP: ").strip()
+        access_token = exchange_auth_code_for_tokens(auth_code)
+
+    # Validate the access token
+    validate_access_token(access_token)
+    return access_token
 
 def main():
     print("=== WHOOP API Token Fetcher ===")
