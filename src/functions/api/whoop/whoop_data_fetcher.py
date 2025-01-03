@@ -1,7 +1,7 @@
 import os
 import requests
 from datetime import datetime, timedelta, timezone
-from whoop_auth_handler import get_whoop_access_token
+from src.functions.api.whoop.whoop_auth_handler import get_whoop_access_token
 from enum import Enum
 
 
