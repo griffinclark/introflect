@@ -19,7 +19,7 @@ if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
 # Constants
 AUTH_URL = "https://api.prod.whoop.com/oauth/oauth2/auth"
 TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token"
-DATA_ENDPOINT = "https://api.prod.whoop.com/v1/user/profile/basic"
+DATA_ENDPOINT = "https://api.prod.whoop.com/developer/v1/user/profile/basic"
 FIRESTORE_COLLECTION = "app_secrets"
 FIRESTORE_DOCUMENT = "whoop"
 
