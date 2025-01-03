@@ -5,10 +5,12 @@ from whoop_auth_handler import get_whoop_access_token
 
 # Constants
 BASE_URL = "https://api.prod.whoop.com/developer/v1"
-CYCLES_ENDPOINT = f"{BASE_URL}/cycle"
+RECOVERY_ENDPOINT = f"{BASE_URL}/recovery"
+WORKOUT_COLLECTION=f"{BASE_URL}/activity/workout"
+SLEEP_COLLECTION=f"{BASE_URL}/activity/sleep"
+CYCLE_COLLECTION=f"{BASE_URL}/cycle"
 
-# Function to fetch data for the last 14 days
-def fetch_last_14_days_data():
+def fetch_last_14_days_workouts():
     # Get the access token
     access_token = get_whoop_access_token()
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -28,9 +30,14 @@ def fetch_last_14_days_data():
         "limit": 25  # Adjust as needed; WHOOP API may have a maximum limit per request
     }
 
-    all_data = []
+    all_workouts = []
+    next_token = None
+
     while True:
-        response = requests.get(CYCLES_ENDPOINT, headers=headers, params=params)
+        if next_token:
+            params["nextToken"] = next_token
+
+        response = requests.get(CYCLE_COLLECTION, headers=headers, params=params)
         if response.status_code == 401:
             print("Unauthorized request. Check your access token or scopes.")
             print("Response Content:", response.text)
@@ -38,20 +45,17 @@ def fetch_last_14_days_data():
 
         response.raise_for_status()
         data = response.json()
-        all_data.extend(data)
+        all_workouts.extend(data.get("records", []))
 
-        # Check if there's more data to fetch
-        if len(data) < params["limit"]:
+        next_token = data.get("next_token")
+        if not next_token:
             break
 
-        # Update the start date for the next batch
-        params["start"] = data[-1]["start"]
-
-    return all_data
+    return all_workouts
 
 if __name__ == "__main__":
     try:
-        data = fetch_last_14_days_data()
-        print("Fetched Data:", data)
+        workouts = fetch_last_14_days_workouts()
+        print("Fetched Workouts:", workouts)
     except Exception as e:
         print(f"An error occurred: {e}")
