@@ -22,7 +22,7 @@ ENDPOINTS = {
 }
 
 
-def fetch_whoop_data(data_type: str, days: int, limit: int = 25):
+def fetch_whoop_data(data_type: str, days: int, uid: str, limit: int = 25):
     """
     Fetches WHOOP data for the specified type and date range.
 
@@ -38,7 +38,7 @@ def fetch_whoop_data(data_type: str, days: int, limit: int = 25):
         raise ValueError(f"Invalid data type '{data_type}'. Must be one of {list(ENDPOINTS.keys())}.")
 
     # Get the access token
-    access_token = get_whoop_access_token()
+    access_token = get_whoop_access_token(uid)
     headers = {"Authorization": f"Bearer {access_token}"}
 
     # Calculate date range
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                 print(f"Skipping invalid data type: {data_type}")
                 continue
             print(f"Fetching {data_type.capitalize()} data...")
-            fetched_data = fetch_whoop_data(data_type, days)
+            fetched_data = fetch_whoop_data(data_type, days, "g")
             print(f"Fetched {data_type.capitalize()} Data:", fetched_data)
 
     except Exception as e:
