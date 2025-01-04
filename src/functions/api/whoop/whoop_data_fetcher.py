@@ -1,8 +1,10 @@
 import os
 import requests
 from datetime import datetime, timedelta, timezone
-from src.functions.api.whoop.whoop_auth_handler import get_whoop_access_token
 from enum import Enum
+from src.functions.api.whoop.whoop_auth_handler import get_whoop_access_token
+from src.utils.constants import WHOOPRecovery, WHOOPWorkout, WHOOPSleep, WHOOPCycle
+from typing import List, Union
 
 
 class WhoopDataType(Enum):
@@ -21,18 +23,40 @@ ENDPOINTS = {
     "cycle": f"{BASE_URL}/cycle",
 }
 
+def map_to_whoop_type(data_type: str, records: List[dict]) -> List[Union[WHOOPRecovery, WHOOPWorkout, WHOOPSleep, WHOOPCycle]]:
+    """
+    Map raw WHOOP data to typed data structures.
 
-def fetch_whoop_data(data_type: str, days: int, uid: str, limit: int = 25):
+    Args:
+        data_type (str): The type of data to map ("recovery", "workout", "sleep", "cycle").
+        records (list): The raw records fetched from WHOOP.
+
+    Returns:
+        list: A list of typed data.
+    """
+    if data_type == "recovery":
+        return [WHOOPRecovery(**record) for record in records]
+    elif data_type == "workout":
+        return [WHOOPWorkout(**record) for record in records]
+    elif data_type == "sleep":
+        return [WHOOPSleep(**record) for record in records]
+    elif data_type == "cycle":
+        return [WHOOPCycle(**record) for record in records]
+    else:
+        raise ValueError(f"Unsupported data type: {data_type}")
+
+def fetch_whoop_data(data_type: str, days: int, uid: str, limit: int = 25) -> List[Union[WHOOPRecovery, WHOOPWorkout, WHOOPSleep, WHOOPCycle]]:
     """
     Fetches WHOOP data for the specified type and date range.
 
     Args:
         data_type (str): The type of data to fetch ("recovery", "workout", "sleep", "cycle").
         days (int): The number of days in the past to fetch data for.
+        uid (str): The user ID.
         limit (int): The maximum number of records per request (default: 25).
 
     Returns:
-        list: A list of fetched data records.
+        List: A list of typed data records.
     """
     if data_type not in ENDPOINTS:
         raise ValueError(f"Invalid data type '{data_type}'. Must be one of {list(ENDPOINTS.keys())}.")
@@ -77,7 +101,7 @@ def fetch_whoop_data(data_type: str, days: int, uid: str, limit: int = 25):
         if not next_token:
             break
 
-    return all_data
+    return map_to_whoop_type(data_type, all_data)
 
 if __name__ == "__main__":
     try:
@@ -97,4 +121,3 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"An error occurred: {e}")
-
