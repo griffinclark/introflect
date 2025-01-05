@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+from datetime import datetime, timedelta, timezone
 
 # Load environment variables
 load_dotenv()
@@ -145,20 +146,62 @@ def retrieve_child_blocks(block_id):
     data = response.json()
     return data.get("results", [])
 
-def generate_labeled_md():
-    try:
-        # Fetch the most recent journaling entry
-        most_recent_entry = query_most_recent_entry()
-        page_id = most_recent_entry['id']
-        created_time = most_recent_entry['created_time']
-        content = retrieve_page_content(page_id)
 
-        # Initialize the markdown output
-        md_output = f"# Most Recent Morning Journaling Entry | Created Time: {created_time}\n"
+def get_entries_with_content_for_n_days(n):
+    """
+    Fetches entries from the specified Notion database created within the past n days,
+    retrieves their content, and formats it as labeled markdown-like output.
 
-        def process_blocks(blocks, md_output):
+    Args:
+        n (int): The number of recent days to fetch entries for.
+
+    Returns:
+        list: A list of formatted strings, each containing metadata and processed content for an entry.
+    """
+    # Calculate the start date for the query
+    start_date = datetime.now(tz=timezone.utc) - timedelta(days=n)
+    start_date_str = start_date.isoformat()  # Format as ISO 8601
+
+    url = f"{BASE_URL}/databases/{DATABASE_ID}/query"
+    payload = {
+        "filter": {
+            "property": "Created",
+            "date": {
+                "on_or_after": start_date_str  # Filter entries created on or after the start date
+            }
+        },
+        "sorts": [
+            {
+                "timestamp": "created_time",
+                "direction": "descending"  # Most recent first
+            }
+        ]
+    }
+
+    response = requests.post(url, headers=HEADERS, json=payload)
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to query Notion database: {response.status_code}, {response.text}")
+
+    data = response.json()
+    results = data.get("results", [])
+
+    if not results:
+        return []  # Return an empty list if no entries are found
+
+    # Fetch and process each entry
+    formatted_entries = []
+
+    for entry in results:
+        page_id = entry["id"]
+        page_content = retrieve_page_content(page_id)
+
+        # Start with metadata
+        formatted_entry = f"# {entry['properties']['Name']['title'][0]['plain_text']} | Created: {entry['properties']['Created']['created_time']}\n"
+
+        def process_blocks(blocks, output):
             """
-            Process blocks of content to extract questions and answers.
+            Processes blocks to extract journaling questions and answers in a formatted manner.
             """
             last_question = None
 
@@ -167,52 +210,54 @@ def generate_labeled_md():
 
                 # Heading 2 as a journaling question
                 if block_type == "heading_2":
-                    # If there's an unanswered question, label it
+                    # Handle unanswered question
                     if last_question is not None:
-                        md_output += f"UserAnswer: user did not answer\n"
+                        output += "UserAnswer: user did not answer\n"
 
-                    # Extract question text
-                    text = block.get("heading_2", {}).get("rich_text", [])
-                    text_content = "".join([part.get("text", {}).get("content", "") for part in text]).strip()
-                    md_output += f"JournalingQuestion: {text_content}\n"
-                    last_question = text_content
+                    text = block["heading_2"]["rich_text"]
+                    question = "".join([t["plain_text"] for t in text]).strip()
+                    output += f"JournalingQuestion: {question}\n"
+                    last_question = question
 
                 # Paragraph as an answer
-                elif block_type == "paragraph":
-                    if last_question is not None:
-                        text = block.get("paragraph", {}).get("rich_text", [])
-                        text_content = "".join([part.get("text", {}).get("content", "") for part in text]).strip()
+                elif block_type == "paragraph" and last_question is not None:
+                    text = block["paragraph"]["rich_text"]
+                    answer = "".join([t["plain_text"] for t in text]).strip()
+                    output += f"UserAnswer: {answer or 'user did not answer'}\n"
+                    last_question = None
 
-                        # Handle empty answers
-                        md_output += f"UserAnswer: {text_content or 'user did not answer'}\n"
-                        last_question = None
-
-                # Column List (nested blocks)
+                # Process nested blocks in column_list
                 elif block_type == "column_list":
-                    children = retrieve_child_blocks(block.get("id"))
+                    children = retrieve_child_blocks(block["id"])
                     for child in children:
-                        column_content = retrieve_child_blocks(child.get("id"))
-                        md_output = process_blocks(column_content, md_output)
+                        child_blocks = retrieve_child_blocks(child["id"])
+                        output = process_blocks(child_blocks, output)
 
                 # Divider
                 elif block_type == "divider":
                     if last_question is not None:
-                        md_output += f"UserAnswer: user did not answer\n"
+                        output += "UserAnswer: user did not answer\n"
                         last_question = None
-                    md_output += "---\n"
+                    output += "---\n"
 
-            # If there's an unanswered question at the end
+            # Handle any remaining unanswered question
             if last_question is not None:
-                md_output += f"UserAnswer: user did not answer\n"
+                output += "UserAnswer: user did not answer\n"
 
-            return md_output
+            return output
 
-        # Process the main content
-        md_output = process_blocks(content, md_output)
+        # Process content
+        formatted_entry = process_blocks(page_content, formatted_entry)
 
-        return md_output
-    except Exception as e:
-        return f"An error occurred: {e}"
+        # Append the formatted entry
+        formatted_entries.append(formatted_entry)
+
+    return formatted_entries
+
 
 if __name__ == "__main__":
-    print(generate_labeled_md())
+    # Fetch and print formatted entries for the past 3 days
+    entries = get_entries_with_content_for_n_days(3)
+    for entry in entries:
+        print(entry)
+        print("\n---\n")
