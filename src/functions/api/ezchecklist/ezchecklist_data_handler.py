@@ -87,17 +87,27 @@ def format_to_dict(data):
 
     return formatted_data
 
-def main():
+def get_ezchecklist_data_for_days(n):
+    """
+    Returns data for the most recent n days.
+
+    :param n: Number of recent days to return.
+    :return: List of dictionaries for the most recent n days.
+    """
     # Clean and trim the data
     cleaned_data = trim_data(values_list)
     
     # Format the cleaned data into a list of dictionaries
     formatted_data = format_to_dict(cleaned_data)
     
-    # Return the cleaned, structured data
-    return formatted_data
+    # Return only the most recent n days
+    return formatted_data[:n]
+
+def main():
+    # Example usage: Fetch data for the most recent 5 days
+    recent_data = get_ezchecklist_data_for_days(100)
+    for entry in recent_data:
+        print(entry)
 
 if __name__ == "__main__":
-    cleaned_data = main()
-    for entry in cleaned_data[:5]:  # Print the first 5 entries for verification
-        print(entry)
+    main()
