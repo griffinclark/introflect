@@ -126,5 +126,15 @@ class PersonalityMetric:
 @dataclass
 class PersonalityProfile:
     metrics: List[PersonalityMetric]
-    datetimeCreated: Optional[str] = None
-    for_user_UID: Optional[str] = None
+    datetimeCreated: str = None
+    for_user_UID: str = None
+    source: str = None
+
+@dataclass
+class LLMTool:
+    name: str  # Name of the tool
+    description: str  # Description of what the tool does
+    parameters: Dict[str, str]  # Parameters and their types
+    use_cases: List[str]  # List of use cases
+    limitations: List[str]  # List of limitations
+    credibility_score: str  # Credibility score (HIGH, MEDIUM, LOW)

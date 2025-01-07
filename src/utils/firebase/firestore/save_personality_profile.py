@@ -7,6 +7,7 @@ from src.utils.constants import PersonalityProfile
 # Load personality profile from an external JSON file
 JSON_FILE_PATH = "./src/utils/firebase/firestore/my_data.json"
 USER_UID = "g" # TODO replace before using for any other user
+SOURCE="understandmyself.com"
 
 def load_personality_profile(file_path: str) -> PersonalityProfile:
     try:
@@ -31,6 +32,9 @@ def store_user_profile(uid: str, profile_data: PersonalityProfile):
 
         # Add the user UID for reference
         profile_data["for_user_UID"] = uid
+        
+        # Add the source of the personality profile
+        profile_data["source"] = SOURCE
 
         # Set the user profile in the personality_profiles collection
         profiles_collection.document(uid).set(profile_data, merge=True)

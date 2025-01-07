@@ -1,0 +1,88 @@
+{
+  "EZChecklist Data": {
+    "description": "Access EZchecklist™ data to help users build solid habits by focusing on the most important activities for success in life and business. This tool enables tracking of daily routines, goal setting, and progress monitoring to facilitate personal and professional growth.",
+    "parameters": { "num_days": "integer" },
+    "use_cases": [
+      "Tracking user adherence to daily goals",
+      "Identifying patterns in checklist completion",
+      "Analyzing habit formation over time"
+    ],
+    "limitations": [
+      "Requires valid checklist entries",
+      "Data older than 30 days might not be available"
+    ],
+    "credibility_score": "LOW"
+  },
+  "Query the User": {
+    "description": "Ask the user a specific question or get clarification. Requires a query to be specified.",
+    "parameters": { "query": "string" },
+    "use_cases": ["Gathering missing data", "Clarifying ambiguous inputs"],
+    "limitations": [
+      "Depends on user response",
+      "May not handle complex follow-ups"
+    ],
+    "credibility_score": "MEDIUM"
+  },
+  "WHOOP Data - Sleep": {
+    "description": "Retrieve detailed WHOOP sleep performance data, including sleep stages and efficiency, over a specified number of days.",
+    "parameters": { "num_days": "integer" },
+    "use_cases": ["Analyzing sleep quality", "Identifying sleep disturbances"],
+    "limitations": [
+      "Requires WHOOP device data",
+      "Data older than 30 days might not be available"
+    ],
+    "credibility_score": "HIGH"
+  },
+  "WHOOP Data - Cycles": {
+    "description": "Access WHOOP activity cycles, including strain and energy expenditure, over a specified number of days.",
+    "parameters": { "num_days": "integer" },
+    "use_cases": [
+      "Evaluating daily activity levels",
+      "Understanding strain trends over time"
+    ],
+    "limitations": [
+      "Requires WHOOP device data",
+      "Data may be incomplete for interrupted cycles"
+    ],
+    "credibility_score": "HIGH"
+  },
+  "WHOOP Data - Workout": {
+    "description": "Retrieve WHOOP workout data, including strain, heart rate metrics, and energy expenditure, over a specified number of days.",
+    "parameters": { "num_days": "integer" },
+    "use_cases": [
+      "Analyzing workout intensity",
+      "Tracking energy expenditure trends"
+    ],
+    "limitations": [
+      "Requires WHOOP device data",
+      "May not capture untracked workouts"
+    ],
+    "credibility_score": "HIGH"
+  },
+  "WHOOP Data - Recovery": {
+    "description": "Fetch WHOOP recovery scores, readiness metrics, and physiological data over a specified number of days.",
+    "parameters": { "num_days": "integer" },
+    "use_cases": [
+      "Evaluating recovery trends",
+      "Correlating recovery with activity levels"
+    ],
+    "limitations": [
+      "Requires WHOOP device data",
+      "Data might not account for external factors"
+    ],
+    "credibility_score": "HIGH"
+  },
+  "Morning Journaling Exercises": {
+    "description": "Analyze or retrieve insights from morning journaling exercises over a specified number of days.",
+    "parameters": { "num_days": "integer" },
+    "use_cases": [
+      "Reflecting on user mindset over time",
+      "Identifying patterns in daily focus"
+    ],
+    "limitations": [
+      "Requires consistent journaling entries",
+      "Insights depend on quality of entries"
+    ],
+    "credibility_score": "LOW"
+  }
+}
