@@ -137,3 +137,4 @@ dmypy.json
 *.~*
 src/functions/api/ezchecklist/google_sheets_service_key.json
 secrets/google_sheets_service_key.json
+src/utils/firebase/firestore/my_data.json

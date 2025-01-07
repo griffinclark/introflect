@@ -113,3 +113,18 @@ class WHOOPCycle:
     timezone_offset: str  # e.g., "-08:00"
     score_state: str
     score: WHOOPCycleScore
+
+@dataclass
+class PersonalityMetric:
+    metric: str
+    description: str
+    score: int
+    percentile: Optional[int]
+    interpretation: str
+    implications: Optional[List[str]] = field(default_factory=list)
+
+@dataclass
+class PersonalityProfile:
+    metrics: List[PersonalityMetric]
+    datetimeCreated: Optional[str] = None
+    for_user_UID: Optional[str] = None
