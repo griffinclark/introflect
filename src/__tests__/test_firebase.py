@@ -1,5 +1,5 @@
 import pytest
-from src.resources.firebase.firebase_init import firestore_client
+from src.utils.firebase.firebase_init import firestore_client
 
 # Constants for the test
 TEST_COLLECTION = "test_collection"
