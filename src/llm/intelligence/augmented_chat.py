@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from typing import List, Any
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
-from src.llm.context.tools.tool_handler import execute_tool, select_input_tools_with_llm
+from src.llm.context.tools.tool_handler import execute_tools, select_input_tools_with_llm
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -35,29 +35,28 @@ def augmented_chat(user_query: str) -> str:
     """
     # Step 1: Determine tools using LLM
     try:
-        first_llm_response = select_input_tools_with_llm(user_query)
-        tools_to_use = json.loads(first_llm_response)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Error parsing LLM response as JSON: {e}\nRaw Response: {first_llm_response}")
-    
-    if not tools_to_use:
-        return "No tools determined from the LLM response. Unable to proceed."
+        raw_tool_choices = select_input_tools_with_llm(user_query)  # Get raw JSON
+    except Exception as e:
+        raise RuntimeError(f"Error selecting tools: {e}")
 
     # Step 2: Execute tools and gather data
     try:
-        tool_outputs = [execute_tool(tool["tool_name"], tool["params"]) for tool in tools_to_use]
+        tool_outputs = execute_tools(raw_tool_choices)  # Pass raw JSON to execute_tools
     except Exception as e:
         raise RuntimeError(f"Error executing tools: {e}")
 
     # Step 3: Generate response with data
-    combined_data = "\n".join([json.dumps(tool, indent=2) for tool in tool_outputs])
+    combined_data = "\n".join([json.dumps(tool.to_dict(), indent=2) for tool in tool_outputs])  # Serialize ToolResponse objects
     second_llm_prompt = (
-        f"You are a friendly professional psychologist. Speak as a human would, focusing on responding conversationally. "
+        f"You are a friendly professional. Speak as a human would, focusing on responding conversationally. "
         f"Continue this chat. Shoot for an output length of 2-5 sentences. "
         f"User Query: {user_query}\nCombined Data:\n{combined_data}\n\nGenerate an answer based on the above data."
     )
-    second_llm_response = model.invoke([HumanMessage(content=second_llm_prompt)])
-    return second_llm_response.content
+    try:
+        second_llm_response = model.invoke([HumanMessage(content=second_llm_prompt)])
+        return second_llm_response.content
+    except Exception as e:
+        raise RuntimeError(f"Error generating response: {e}")
 
 # CLI Main Loop
 def main():

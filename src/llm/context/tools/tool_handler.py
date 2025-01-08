@@ -1,7 +1,7 @@
 # tool_handler.py
 import os
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List
 from src.functions.api.ezchecklist.ezchecklist_data_handler import get_ezchecklist_data_for_days
 from src.functions.api.whoop.token_manager import WhoopTokenManager
 from src.functions.api.whoop.whoop_data_fetcher import WhoopDataFetcher
@@ -17,7 +17,8 @@ class ToolResponse:
         self.params = params
         self.output = output
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert ToolResponse to a dictionary for JSON serialization."""
         return {
             "tool_name": self.tool_name,
             "params": self.params,
@@ -26,6 +27,34 @@ class ToolResponse:
 
 # Real implementations of tool functions
 
+def execute_tools(raw_tool_choices: str) -> List[ToolResponse]:
+    """
+    Executes a list of tools with their respective parameters, taking in raw JSON input.
+
+    Args:
+        raw_tool_choices (str): A JSON string containing the tool choices with parameters.
+
+    Returns:
+        List[ToolResponse]: A list of ToolResponse objects with tool outputs.
+    """
+    try:
+        # Parse the raw JSON string into a list of dictionaries
+        tools = json.loads(raw_tool_choices)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse tool choices: {e}")
+
+    results = []
+    for tool in tools:
+        tool_name = tool.get("tool_name")
+        params = tool.get("params", {})
+        try:
+            output = execute_tool(tool_name, params)
+            tool_response = ToolResponse(tool_name=tool_name, params=params, output=output)
+            results.append(tool_response)
+        except Exception as e:
+            tool_response = ToolResponse(tool_name=tool_name, params=params, output=f"Error: {str(e)}")
+            results.append(tool_response)
+    return results
 
 def execute_tool(tool_name: str, params: Dict[str, Any]) -> str:
     try:

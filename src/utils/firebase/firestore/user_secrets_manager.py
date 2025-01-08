@@ -3,7 +3,7 @@ from src.utils.firebase.firebase_init import firestore_client
 def crud_user_secret(uid, key, action, value=None):
     try:
         # Query the users collection to find the document where UID matches the provided uid
-        query = firestore_client.collection("users").where(filter=("UID", "==", uid)).get()
+        query = firestore_client.collection("users").where("UID", "==", uid).get()
         if not query:
             raise ValueError(f"No user document found with UID: {uid}.")
         

@@ -33,7 +33,7 @@
     ],
     "credibility_score": "HIGH"
   },
-  "WHOOP Data - Cycles": {
+  "WHOOP Data - Cycle": {
     "description": "Access WHOOP activity cycles, including strain and energy expenditure, over a specified number of days.",
     "parameters": { "num_days": "integer" },
     "use_cases": [
