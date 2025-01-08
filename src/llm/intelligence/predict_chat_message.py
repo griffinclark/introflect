@@ -1,29 +1,11 @@
 import os
 import json
-from typing import List, Dict, Any
 from dotenv import load_dotenv
+from typing import List, Any
 import anthropic
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
-from concurrent.futures import ThreadPoolExecutor
-from src.functions.api.ezchecklist.ezchecklist_data_handler import get_ezchecklist_data_for_days
-from src.functions.api.whoop.token_manager import WhoopTokenManager
-from src.functions.api.whoop.whoop_data_fetcher import WhoopDataFetcher
-from src.functions.api.notion.notion_data_handler import get_entries_with_content_for_n_days
-
-class ToolResponse:
-    def __init__(self, tool_name: str, params: Dict[str, Any], output: Any):
-        self.tool_name = tool_name
-        self.params = params
-        self.output = output
-
-    def to_dict(self):
-        return {
-            "tool_name": self.tool_name,
-            "params": self.params,
-            "output": self.output
-        }
-
+from src.llm.context.tools.tool_handler import execute_tool
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -37,43 +19,14 @@ os.environ["ANTHROPIC_API_KEY"] = API_KEY
 
 # Initialize the Anthropic chat model
 model = ChatAnthropic(
-    model="claude-3-5-sonnet-20241022",  # Specify the desired model version
-    temperature=0.7,                     # Adjust the temperature for response variability
-    max_tokens=1024                      # Set a valid maximum output length
+    model="claude-3-5-sonnet-20241022",
+    temperature=0.7,
+    max_tokens=1024
 )
 
 # Load tools JSON
 with open("./src/llm/context/tools/input_tools.json", "r") as f:
     tools = json.load(f)
-
-# Real implementations of tool functions
-def execute_tool(tool_name: str, params: Dict[str, Any]) -> str:
-    try:
-        if tool_name.startswith("WHOOP Data"):
-            data_type = tool_name.split(" - ")[1].lower()
-            num_days = params.get("num_days", 7)
-
-            # Initialize TokenManager and WhoopDataFetcher
-            token_manager = WhoopTokenManager(
-                uid="g",
-                client_id=os.getenv("WHOOP_CLIENT_ID"),
-                client_secret=os.getenv("WHOOP_CLIENT_SECRET"),
-                redirect_uri="http://localhost:8642/callback",
-                token_url="https://api.prod.whoop.com/oauth/oauth2/token",
-            )
-            whoop_fetcher = WhoopDataFetcher(token_manager)
-
-            return whoop_fetcher.fetch_whoop_data(data_type, num_days)
-        elif tool_name == "EZChecklist Data":
-            num_days = params.get("num_days", 7)
-            return get_ezchecklist_data_for_days(num_days)
-        elif tool_name == "Morning Journaling Exercises":
-            num_days = params.get("num_days", 7)
-            return get_entries_with_content_for_n_days(num_days)
-        else:
-            return f"Unknown tool: {tool_name}"
-    except Exception as e:
-        return f"Error: {str(e)}"
 
 # Determine relevant tools using LLM
 def determine_tools_with_llm(user_query: str) -> str:
@@ -92,32 +45,21 @@ Determine which tools to use and provide parameters for each tool. Output a JSON
   }}
 ]
 
-IMPORTANT: Only output the JSON array. Do not include any extra text, prefix, suffix, or characters outside of the JSON array as it will break the system.
+STRICTLY return only the JSON array. Any additional text will cause an error. I will give you a $100 tip if you follow these instructions perfectly, and only return structured JSON that works with my code
+
+Your response must properly load with this code: tools_to_use = json.loads(llm_response)
 """
     message = HumanMessage(content=tools_prompt)
     response = model.invoke([message])
-
-    # Return raw response for logging
     return response.content
 
 # Generate a response from the LLM
 def generate_response_with_data(user_query: str, tool_outputs: List[Any]):
-    # Flatten tool_outputs in case it's nested
-    flattened_outputs = [
-        tool.to_dict() if isinstance(tool, ToolResponse) else tool
-        for sublist in tool_outputs
-        for tool in (sublist if isinstance(sublist, list) else [sublist])
-    ]
-    
-    # Convert tool outputs to strings
-    combined_data = "\n".join([json.dumps(tool, indent=2) for tool in flattened_outputs])
-    
+    combined_data = "\n".join([json.dumps(tool, indent=2) for tool in tool_outputs])
     second_llm_prompt = f"User Query: {user_query}\nCombined Data:\n{combined_data}\n\nGenerate an answer based on the above data."
     message = HumanMessage(content=second_llm_prompt)
     second_llm_response = model.invoke([message])
-    
     return second_llm_response.content, second_llm_prompt
-
 
 # Main CLI loop
 def main():
@@ -135,14 +77,26 @@ def main():
         print("\nFirst LLM Response:")
         print(first_llm_response)
 
+        # Try parsing the LLM response
+        tools_to_use = None
         try:
             tools_to_use = json.loads(first_llm_response)
         except json.JSONDecodeError as e:
             print(f"Error parsing LLM response as JSON: {e}")
+            print("LLM Response (raw):", first_llm_response)
+            print("Please try a different query.")
+            continue  # Allow the user to input another query
+
+        if not tools_to_use:
+            print("No tools determined from the LLM response. No additional context will be provided")
             continue
 
         # Step 2: Execute tools and gather data
-        tool_outputs = [execute_tool(tool["tool_name"], tool["params"]) for tool in tools_to_use]
+        try:
+            tool_outputs = [execute_tool(tool["tool_name"], tool["params"]) for tool in tools_to_use]
+        except Exception as e:
+            print(f"Error executing tools: {e}")
+            continue
 
         # Step 3: Generate response with data
         second_llm_response, second_llm_prompt = generate_response_with_data(user_input, tool_outputs)
