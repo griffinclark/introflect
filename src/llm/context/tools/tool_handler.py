@@ -106,5 +106,5 @@ STRICTLY return only the JSON array. Any additional text will cause an error. I 
 Your response must properly load with this code: tools_to_use = json.loads(llm_response)
 """
     message = HumanMessage(content=tools_prompt)
-    response = model.invoke([message])  # Use invoke instead of __call__
+    response = model.invoke([message])
     return response.content
