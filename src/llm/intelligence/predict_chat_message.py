@@ -7,9 +7,23 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
 from concurrent.futures import ThreadPoolExecutor
 from src.functions.api.ezchecklist.ezchecklist_data_handler import get_ezchecklist_data_for_days
+from src.functions.api.whoop.token_manager import WhoopTokenManager
 from src.functions.api.whoop.whoop_data_fetcher import WhoopDataFetcher
 from src.functions.api.notion.notion_data_handler import get_entries_with_content_for_n_days
-from src.functions.api.whoop.token_manager import WhoopTokenManager
+
+class ToolResponse:
+    def __init__(self, tool_name: str, params: Dict[str, Any], output: Any):
+        self.tool_name = tool_name
+        self.params = params
+        self.output = output
+
+    def to_dict(self):
+        return {
+            "tool_name": self.tool_name,
+            "params": self.params,
+            "output": self.output
+        }
+
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -32,22 +46,8 @@ model = ChatAnthropic(
 with open("./src/llm/context/tools/input_tools.json", "r") as f:
     tools = json.load(f)
 
-# Define ToolResponse type
-class ToolResponse:
-    def __init__(self, tool_name: str, params: Dict[str, Any], output: Any):
-        self.tool_name = tool_name
-        self.params = params
-        self.output = output
-
-    def to_dict(self):
-        return {
-            "tool_name": self.tool_name,
-            "params": self.params,
-            "output": self.output
-        }
-
 # Real implementations of tool functions
-def execute_tool(tool_name: str, params: Dict[str, Any]) -> ToolResponse:
+def execute_tool(tool_name: str, params: Dict[str, Any]) -> str:
     try:
         if tool_name.startswith("WHOOP Data"):
             data_type = tool_name.split(" - ")[1].lower()
@@ -63,26 +63,20 @@ def execute_tool(tool_name: str, params: Dict[str, Any]) -> ToolResponse:
             )
             whoop_fetcher = WhoopDataFetcher(token_manager)
 
-            output = whoop_fetcher.fetch_whoop_data(data_type, num_days)
+            return whoop_fetcher.fetch_whoop_data(data_type, num_days)
         elif tool_name == "EZChecklist Data":
             num_days = params.get("num_days", 7)
-            output = get_ezchecklist_data_for_days(num_days)
+            return get_ezchecklist_data_for_days(num_days)
         elif tool_name == "Morning Journaling Exercises":
             num_days = params.get("num_days", 7)
-            output = get_entries_with_content_for_n_days(num_days)
+            return get_entries_with_content_for_n_days(num_days)
         else:
-            output = f"Unknown tool: {tool_name}"
-
-        return ToolResponse(tool_name=tool_name, params=params, output=output)
+            return f"Unknown tool: {tool_name}"
     except Exception as e:
-        return ToolResponse(tool_name=tool_name, params=params, output=f"Error: {str(e)}")
-def query_user(question: str) -> str:
-    """Prompt the user for an answer to a given question."""
-    print(f"Query: {question}")
-    return input("Your response: ")
+        return f"Error: {str(e)}"
 
 # Determine relevant tools using LLM
-def determine_tools_with_llm(user_query: str) -> List[Dict[str, Any]]:
+def determine_tools_with_llm(user_query: str) -> str:
     tools_prompt = f"""
 Available Tools:
 {json.dumps(tools, indent=2)}
@@ -103,40 +97,27 @@ IMPORTANT: Only output the JSON array. Do not include any extra text, prefix, su
     message = HumanMessage(content=tools_prompt)
     response = model.invoke([message])
 
-    # Log the raw response for debugging
-    print("Raw LLM Response:", response.content)
-
-    if not response.content.strip():
-        print("Error: LLM returned an empty response for tool selection.")
-        return []
-
-    try:
-        return json.loads(response.content)
-    except json.JSONDecodeError as e:
-        print(f"Error parsing LLM response as JSON: {e}")
-        print("Response content:", response.content)
-        return []
-
-# Execute tools in parallel
-def execute_tools(tools_to_use: List[Dict[str, Any]]) -> List[ToolResponse]:
-    results = []
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(execute_tool, tool["tool_name"], tool["params"]): tool["tool_name"] for tool in tools_to_use}
-        for future in futures:
-            tool_name = futures[future]
-            try:
-                results.append(future.result())
-            except Exception as e:
-                results.append(ToolResponse(tool_name=tool_name, params={}, output=f"Error: {str(e)}"))
-    return results
+    # Return raw response for logging
+    return response.content
 
 # Generate a response from the LLM
-def generate_response_with_data(user_query: str, tool_outputs: List[ToolResponse]):
-    combined_data = "\n".join([f"{tool.tool_name}: {tool.output}" for tool in tool_outputs])
-    prompt = f"User Query: {user_query}\nCombined Data:\n{combined_data}\n\nGenerate an answer based on the above data."
-    message = HumanMessage(content=prompt)
-    response = model.invoke([message])
-    return response.content
+def generate_response_with_data(user_query: str, tool_outputs: List[Any]):
+    # Flatten tool_outputs in case it's nested
+    flattened_outputs = [
+        tool.to_dict() if isinstance(tool, ToolResponse) else tool
+        for sublist in tool_outputs
+        for tool in (sublist if isinstance(sublist, list) else [sublist])
+    ]
+    
+    # Convert tool outputs to strings
+    combined_data = "\n".join([json.dumps(tool, indent=2) for tool in flattened_outputs])
+    
+    second_llm_prompt = f"User Query: {user_query}\nCombined Data:\n{combined_data}\n\nGenerate an answer based on the above data."
+    message = HumanMessage(content=second_llm_prompt)
+    second_llm_response = model.invoke([message])
+    
+    return second_llm_response.content, second_llm_prompt
+
 
 # Main CLI loop
 def main():
@@ -150,20 +131,27 @@ def main():
             break
 
         # Step 1: Determine tools using LLM
-        tool_selection = determine_tools_with_llm(user_input)
-        if not tool_selection:
-            print("No tools selected. Please try a different query.")
+        first_llm_response = determine_tools_with_llm(user_input)
+        print("\nFirst LLM Response:")
+        print(first_llm_response)
+
+        try:
+            tools_to_use = json.loads(first_llm_response)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing LLM response as JSON: {e}")
             continue
 
-        print("Tool Selection:")
-        print(json.dumps(tool_selection, indent=2))
-
         # Step 2: Execute tools and gather data
-        tool_outputs = execute_tools(tool_selection)
+        tool_outputs = [execute_tool(tool["tool_name"], tool["params"]) for tool in tools_to_use]
 
         # Step 3: Generate response with data
-        final_response = generate_response_with_data(user_input, tool_outputs)
-        print(f"Claude: {final_response}")
+        second_llm_response, second_llm_prompt = generate_response_with_data(user_input, tool_outputs)
+
+        print("\nPrompt for Second LLM Call:")
+        print(second_llm_prompt)
+
+        print("\nSecond LLM Response:")
+        print(second_llm_response)
 
 if __name__ == "__main__":
     main()

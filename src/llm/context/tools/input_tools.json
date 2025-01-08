@@ -84,5 +84,19 @@
       "Insights depend on quality of entries"
     ],
     "credibility_score": "LOW"
+  },
+  "Read Personality Profile": {
+    "description": "Access the user's Big Five personality profile results",
+    "parameters": {},
+    "use_cases": [
+      "Tailor messaging to the user",
+      "Offering targeted recommendations",
+      "Ensuring the user follows suggestions accurately"
+    ],
+    "limitations": [
+      "Personality data analysis may be subjective",
+      "May not cover all aspects of user personality"
+    ],
+    "credibility_score": "MEDIUM"
   }
 }
