@@ -113,3 +113,42 @@ class WHOOPCycle:
     timezone_offset: str  # e.g., "-08:00"
     score_state: str
     score: WHOOPCycleScore
+
+@dataclass
+class PersonalityMetric:
+    metric: str
+    description: str
+    score: int
+    percentile: Optional[int]
+    interpretation: str
+    implications: Optional[List[str]] = field(default_factory=list)
+
+@dataclass
+class PersonalityProfile:
+    metrics: List[PersonalityMetric]
+    datetimeCreated: str = None
+    for_user_UID: str = None
+    source: str = None
+
+@dataclass
+class LLMTool:
+    name: str  # Name of the tool
+    description: str  # Description of what the tool does
+    parameters: Dict[str, str]  # Parameters and their types
+    use_cases: List[str]  # List of use cases
+    limitations: List[str]  # List of limitations
+    credibility_score: str  # Credibility score (HIGH, MEDIUM, LOW)
+
+
+@dataclass
+class ExpertLLM:
+    template_name: str
+    model: str
+    temperature: float
+    personality_prompt: str # who is this expert?
+    speaking_instructions: str # how should they talk?
+    tone: str # what tone should they use?
+    default_length_preference: str # how long/short should their responses be? 
+    preferred_vocabulary_complexity: str # should they speak simply or with detail? 
+    default_response_format: str # should they be biased towards responding with quotes, poetry, bullet points, data, etc.?
+    when_to_use: str # a description for our selector LLM to know when to use this expert

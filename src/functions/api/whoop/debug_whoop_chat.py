@@ -26,8 +26,15 @@ DATA_ENDPOINT = "https://api.prod.whoop.com/developer/v1/user/profile/basic"
 STATE = secrets.token_urlsafe(16)
 AUTH_CODE = None  # To store the authorization code dynamically
 
+def debug_log(stage, details):
+    """Utility function to print detailed debugging information."""
+    print(f"[DEBUG] Stage: {stage}")
+    for key, value in details.items():
+        print(f"  {key}: {value}")
+
 # Exchange authorization code for tokens
 def exchange_auth_code_for_tokens(uid, auth_code):
+    debug_log("Exchange Auth Code", {"uid": uid, "auth_code": auth_code})
     try:
         response = requests.post(
             TOKEN_URL,
@@ -39,6 +46,7 @@ def exchange_auth_code_for_tokens(uid, auth_code):
                 "client_secret": CLIENT_SECRET,
             },
         )
+        debug_log("Token Exchange Response", {"status_code": response.status_code, "response_text": response.text})
         response.raise_for_status()
         tokens = response.json()
 
@@ -49,11 +57,9 @@ def exchange_auth_code_for_tokens(uid, auth_code):
         crud_user_secret(uid, "whoop", "create", value=refresh_token)
         return tokens["access_token"]
     except requests.exceptions.RequestException as e:
-        print(f"Failed to exchange authorization code: {e}")
-        print(f"Response content: {e.response.text if e.response else 'No response content'}")
+        debug_log("Exchange Auth Code Error", {"error": str(e), "response_text": e.response.text if e.response else "No response content"})
         raise
 
-# Refresh access token
 # Refresh access token
 def refresh_access_token(uid):
     try:
@@ -61,7 +67,7 @@ def refresh_access_token(uid):
         if not refresh_token:
             raise ValueError("No refresh token found for the user.")
 
-        print("Refresh Token Retrieved", {"uid": uid, "refresh_token": refresh_token})
+        debug_log("Refresh Token Retrieved", {"uid": uid, "refresh_token": refresh_token})
         
         # Refresh token request
         request_data = {
@@ -71,13 +77,13 @@ def refresh_access_token(uid):
             "client_secret": CLIENT_SECRET,
             "redirect_uri": REDIRECT_URI,  # Explicitly include redirect_uri if required
         }
-        print("Refresh Token Request Data", request_data)
+        debug_log("Refresh Token Request Data", request_data)
         
         # Send request
         response = requests.post(TOKEN_URL, data=request_data)
         
         # Log response
-        print("Refresh Token Response", {
+        debug_log("Refresh Token Response", {
             "status_code": response.status_code,
             "response_text": response.text,
         })
@@ -86,7 +92,7 @@ def refresh_access_token(uid):
 
         # Parse tokens
         tokens = response.json()
-        print("Parsed Token Response", tokens)
+        debug_log("Parsed Token Response", tokens)
 
         # Save new refresh token
         new_refresh_token = tokens.get("refresh_token")
@@ -96,26 +102,27 @@ def refresh_access_token(uid):
         return tokens["access_token"]
 
     except requests.exceptions.RequestException as e:
-        print("Refresh Token Request Exception", {
+        debug_log("Refresh Token Request Exception", {
             "error": str(e),
             "response_content": e.response.text if e.response else "No response content",
         })
         raise
 
     except ValueError as e:
-        print("Refresh Token ValueError", {"error": str(e)})
+        debug_log("Refresh Token ValueError", {"error": str(e)})
         raise
 
 
 # Validate access token
 def validate_access_token(access_token):
     headers = {"Authorization": f"Bearer {access_token}"}
+    debug_log("Validate Access Token", {"access_token": access_token})
     try:
         response = requests.get(DATA_ENDPOINT, headers=headers)
+        debug_log("Access Token Validation Response", {"status_code": response.status_code, "response_text": response.text})
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"Access token validation failed: {e}")
-        print(f"Response content: {e.response.text if e.response else 'No response content'}")
+        debug_log("Access Token Validation Failed", {"error": str(e), "response_text": e.response.text if e.response else "No response content"})
         raise
 
 # Generate the authorization URL
@@ -136,7 +143,9 @@ def generate_auth_url():
         "scope": " ".join(scopes),
         "state": STATE,
     }
-    return f"{AUTH_URL}?{urlencode(params)}"
+    url = f"{AUTH_URL}?{urlencode(params)}"
+    debug_log("Generate Auth URL", {"url": url})
+    return url
 
 # OAuth server to handle callback
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -145,6 +154,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
         parsed_url = urlparse(self.path)
         if parsed_url.path == "/callback":
             query_components = parse_qs(parsed_url.query)
+            debug_log("OAuth Callback", {"query_components": query_components})
             if query_components.get("state", [None])[0] != STATE:
                 self.send_response(400)
                 self.end_headers()
@@ -177,8 +187,10 @@ def get_whoop_access_token(uid):
     global AUTH_CODE
     try:
         refresh_token = crud_user_secret(uid, "whoop", "read")
+        debug_log("Get WHOOP Access Token - Refresh Token", {"refresh_token": refresh_token})
         return refresh_access_token(uid)
     except ValueError:
+        debug_log("Get WHOOP Access Token - Initiating OAuth Flow", {})
         server = run_server()
         print("Authorization URL:", generate_auth_url())
         input("Press Enter after authorizing the app...")
@@ -194,4 +206,4 @@ if __name__ == "__main__":
         validate_access_token(access_token)
         print("Access Token:", access_token)
     except Exception as e:
-        print(f"An error occurred: {e}")
+        debug_log("Main Error", {"error": str(e)})
