@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import datetime
 from typing import Optional, List, Dict
 
 
@@ -152,3 +153,21 @@ class ExpertLLM:
     preferred_vocabulary_complexity: str # should they speak simply or with detail? 
     default_response_format: str # should they be biased towards responding with quotes, poetry, bullet points, data, etc.?
     when_to_use: str # a description for our selector LLM to know when to use this expert
+    version: int
+
+
+@dataclass
+class ChatMessage:
+    role: str  # "user" or "assistant"
+    content: str
+    expert_used: str  # Template name of the ExpertLLM
+    expert_version: int  # Version of the ExpertLLM
+    timestamp: datetime = field(default_factory=datetime.datetime.utcnow)
+
+
+@dataclass
+class ChatContext:
+    user_id: str
+    max_tokens: int  # Maximum tokens for sliding context
+    context: List[ChatMessage] = field(default_factory=list)
+    token_count: int = 0  # Current token count
