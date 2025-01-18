@@ -1,35 +1,85 @@
 import json
-from src.functions.chat.sliding_context_manager import SlidingContextWindow
+import datetime
 from src.functions.chat.augmented_chat import augmented_chat
+from src.utils.constants import ChatContext, ChatMessage, Conversation  # Import chat types from your constants file
+from src.utils.firebase.firestore.chat_helper import ChatHelper
 
 class ChatApplication:
-    def __init__(self, max_context_tokens: int = 1000):
+    def __init__(self, user_id: str, max_context_tokens: int = 1000):
         """
-        Initializes the ChatApplication with a sliding context window.
+        Initializes the ChatApplication with a ChatContext.
 
         Args:
+            user_id (str): Unique identifier for the user.
             max_context_tokens (int): Maximum number of tokens for the context window.
         """
-        self.context_manager = SlidingContextWindow(max_context_tokens)
+        self.chat_context = ChatContext(user_id=user_id, max_tokens=max_context_tokens)
+        self.chat_helper = ChatHelper()
+        self.conversation_id = f"conversation_{user_id}_{datetime.datetime.now(datetime.UTC).isoformat()}"
 
-    def add_message_to_context(self, role: str, content: str):
+        # Attempt to load an existing conversation
+        try:
+            existing_conversation = self.chat_helper.load_conversation(self.conversation_id)
+            self.chat_context.context = existing_conversation.messages
+            self.chat_context.token_count = sum(len(msg.content.split()) for msg in existing_conversation.messages)
+        except ValueError:
+            # No existing conversation found; start fresh
+            pass
+
+    def add_message_to_context(self, role: str, content: str, expert_used: str = "general", expert_version: int = 1):
         """
-        Adds a message to the sliding context.
+        Adds a message to the chat context.
 
         Args:
-            role (str): Role of the message (e.g., 'user', 'assistant', 'system').
+            role (str): Role of the message (e.g., 'user', 'assistant').
             content (str): Content of the message.
+            expert_used (str): Expert template used for the response.
+            expert_version (int): Version of the expert used.
         """
-        self.context_manager.add_message(role, content)
+        message = ChatMessage(
+            role=role,
+            content=content,
+            expert_used=expert_used,
+            expert_version=expert_version,
+            timestamp=datetime.datetime.now(datetime.UTC)
+        )
+        self.chat_context.context.append(message)
 
-    def get_context(self) -> str:
+        # Update token count
+        self.chat_context.token_count += len(content.split())
+
+        # Trim context if token count exceeds max tokens
+        self._trim_context()
+
+        # Save the updated conversation to Firestore
+        self.chat_helper.save_conversation(
+            Conversation(
+                conversation_id=self.conversation_id,
+                user_id=self.chat_context.user_id,
+                messages=self.chat_context.context,
+                created_at=self.chat_context.context[0].timestamp if self.chat_context.context else datetime.datetime.now(datetime.UTC)
+            )
+        )
+
+    def _trim_context(self):
+        """
+        Trims the chat context to ensure it stays within the token limit.
+        """
+        while self.chat_context.token_count > self.chat_context.max_tokens:
+            removed_message = self.chat_context.context.pop(0)
+            self.chat_context.token_count -= len(removed_message.content.split())
+
+    def get_serialized_context(self) -> str:
         """
         Retrieves the serialized context.
 
         Returns:
             str: The current serialized context as a JSON string.
         """
-        return self.context_manager.get_context()
+        return json.dumps(
+            [{"role": msg.role, "content": msg.content} for msg in self.chat_context.context],
+            indent=2
+        )
 
     def chat(self, user_input: str) -> str:
         """
@@ -45,10 +95,10 @@ class ChatApplication:
         self.add_message_to_context("user", user_input)
 
         # Get the current serialized context
-        serialized_context = self.get_context()
+        serialized_context = self.get_serialized_context()
 
         # Call the augmented_chat function for a response, passing the context
-        response = augmented_chat(user_input, serialized_context)
+        response = augmented_chat(user_input, self.chat_context)
 
         # Add assistant response to context
         self.add_message_to_context("assistant", response)
@@ -61,7 +111,8 @@ def main():
     print("Welcome to the Chat Application!")
     print("Type 'exit' to end the session.")
 
-    chat_app = ChatApplication(max_context_tokens=1000)  # Adjust token limit as needed
+    user_id = "g"  # Replace with a dynamic user ID as needed
+    chat_app = ChatApplication(user_id=user_id, max_context_tokens=1000)  # Adjust token limit as needed
 
     while True:
         user_input = input("You: ")
@@ -75,6 +126,7 @@ def main():
             print("Assistant:", response)
         except Exception as e:
             print(f"An error occurred: {e}")
+
 
 if __name__ == "__main__":
     main()

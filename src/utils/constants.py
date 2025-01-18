@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 
 @dataclass
@@ -171,3 +171,33 @@ class ChatContext:
     max_tokens: int  # Maximum tokens for sliding context
     context: List[ChatMessage] = field(default_factory=list)
     token_count: int = 0  # Current token count
+
+@dataclass
+class Conversation:
+    conversation_id: str  # Unique identifier for the conversation
+    user_id: str  # User ID associated with the conversation
+    messages: List[ChatMessage]  # List of messages in the conversation
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)  # Timestamp for when the conversation started
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Converts the Conversation dataclass to a dictionary format compatible with Firestore.
+
+        Returns:
+            dict: A dictionary representation of the conversation.
+        """
+        return {
+            "conversation_id": self.conversation_id,
+            "user_id": self.user_id,
+            "messages": [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    "expert_used": msg.expert_used,
+                    "expert_version": msg.expert_version,
+                    "timestamp": msg.timestamp.isoformat(),
+                }
+                for msg in self.messages
+            ],
+            "created_at": self.created_at.isoformat(),
+        }
