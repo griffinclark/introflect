@@ -51,13 +51,13 @@ def build_system_prompt(expert: ExpertLLM) -> str:
         f"You are {expert.template_name}, {expert.personality_prompt}.\n"
         f"Tone: {expert.tone}\n"
         f"Speaking Instructions: {expert.speaking_instructions}\n"
-        f"Default Response Length: {expert.default_length_preference}\n"
-        f"Vocabulary Complexity: {expert.preferred_vocabulary_complexity}\n"
-        f"Response Format: {expert.default_response_format}\n"
+        f"Keeping with what you were asked, your response lengh should be: {expert.default_length_preference}\n"
+        f"Your word choice and sentence structure should be: {expert.preferred_vocabulary_complexity}\n"
+        f"While keeping with the question you were asked, try to work some of these into your responses: {expert.default_response_format}\n"
     )
 
 
-def get_expert_with_prompt(expert_name: str) -> Tuple[str, str, float]:
+def get_expert_by_name(expert_name: str) -> Tuple[str, str, float]:
     """
     Retrieve the model name, system prompt, and temperature for a specific expert.
     Args:
@@ -76,7 +76,7 @@ def get_expert_with_prompt(expert_name: str) -> Tuple[str, str, float]:
 if __name__ == "__main__":
     # Example usage
     try:
-        model_name, system_prompt, temperature = get_expert_with_prompt("Uncle Iroh")
+        model_name, system_prompt, temperature = get_expert_by_name("Uncle Iroh")
         print("Model Name:", model_name)
         print("System Prompt:\n", system_prompt)
         print("Temperature:", temperature)

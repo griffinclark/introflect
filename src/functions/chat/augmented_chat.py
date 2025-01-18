@@ -21,7 +21,7 @@ model = ChatAnthropic(
     anthropic_api_key=API_KEY            # Use the API key
 )
 
-def augmented_chat(user_query: str) -> str:
+def augmented_chat(user_query: str, context: str) -> str:
     """
     Executes the two-step chain:
     1. Uses the LLM to determine tools.
@@ -29,6 +29,7 @@ def augmented_chat(user_query: str) -> str:
 
     Args:
         user_query (str): The user's input query.
+        context (str): Serialized context from prior conversation.
 
     Returns:
         str: The LLM's final response.
@@ -45,11 +46,12 @@ def augmented_chat(user_query: str) -> str:
     except Exception as e:
         raise RuntimeError(f"Error executing tools: {e}")
 
-    # Step 3: Generate response with data
+    # Step 3: Generate response with data and context
     combined_data = "\n".join([json.dumps(tool.to_dict(), indent=2) for tool in tool_outputs])  # Serialize ToolResponse objects
     second_llm_prompt = (
         f"You are a friendly professional. Speak as a human would, focusing on responding conversationally. "
         f"Continue this chat. Shoot for an output length of 2-5 sentences. "
+        f"Current Context:\n{context}\n"
         f"User Query: {user_query}\nCombined Data:\n{combined_data}\n\nGenerate an answer based on the above data."
     )
     try:
