@@ -74,16 +74,13 @@ class ChatApplication:
 
         if not isinstance(selected_expert, ExpertLLM):
             self.output_manager.log(
-                f"Error: select_expert must return an ExpertLLM instance, got {
-                    type(selected_expert)}",
+                f"Error: select_expert must return an ExpertLLM instance, got {type(selected_expert)}",
                 level="ERROR"
             )
-            raise ValueError(f"select_expert must return an ExpertLLM instance, got {
-                             type(selected_expert)}")
+            raise ValueError(f"select_expert must return an ExpertLLM instance, got {type(selected_expert)}")
 
         # Log the reasoning for selecting the expert
-        self.output_manager.log(f"🤔 Expert Selection: {
-                                selected_expert.template_name}")
+        self.output_manager.log(f"🤔 Expert Selection: {selected_expert.template_name}")
         self.output_manager.log(f"🧠 Expert Reasoning: {debug_reasoning}")
 
         # Update the current expert in the context
@@ -95,6 +92,7 @@ class ChatApplication:
         # Get the augmentation data
         augmentation_data = get_augmentation_data(
             user_query=user_input, context=serialized_context, output_manager=self.output_manager)
+
         # Build the prompt template with LangChain
         prompt = f"""
             You are an AI system acting as the expert: {selected_expert.template_name}.
@@ -123,27 +121,26 @@ class ChatApplication:
             Respond below:
             """
 
-        # Get the temperature from the expert
-        temperature = selected_expert.temperature if selected_expert.temperature is not None else 0.7
-        # Using LangChain, let's define our Anthropic model
+        # Generate response using Claude
         model = ChatAnthropic(
-            model="claude-3-5-sonnet-20241022",  # Specify model version
-            # Adjust temperature for response variability
-            temperature=temperature,
-            anthropic_api_key=API_KEY            # Use the API key
+            model="claude-3-5-sonnet-20241022", 
+            temperature=selected_expert.temperature or 0.7,
+            anthropic_api_key=API_KEY
         )
 
         message = HumanMessage(content=prompt)
         response = model.invoke([message])
-        response_content = response[0].content.strip()
+
+        # Extract content from the response
+        response_content = response.content.strip()
+
         # Log the assistant's response
-        self.output_manager.log(
-            f"\n💬 {self.chat_context.current_expert.template_name}: {response_content}")
+        self.output_manager.log(f"\n💬 {self.chat_context.current_expert.template_name}: {response_content}")
 
         # Add assistant response to context
         self.add_message_to_context(
             "assistant",
-            response,
+            response_content,
             expert_used=self.chat_context.current_expert.template_name,
             expert_version=self.chat_context.current_expert.version
         )
