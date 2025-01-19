@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict
+import datetime
+from typing import Optional, List, Dict, Any
 
 
 @dataclass
@@ -152,3 +153,45 @@ class ExpertLLM:
     preferred_vocabulary_complexity: str # should they speak simply or with detail? 
     default_response_format: str # should they be biased towards responding with quotes, poetry, bullet points, data, etc.?
     when_to_use: str # a description for our selector LLM to know when to use this expert
+    version: int
+
+
+@dataclass
+class ChatMessage:
+    role: str  # "user" or "assistant"
+    content: str
+    expert_used: Optional[str] = None  # Template name of the ExpertLLM
+    expert_version: Optional[int] = None  # Version of the ExpertLLM
+    timestamp: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+@dataclass
+class ChatContext:
+    user_id: str
+    max_tokens: int  # Maximum tokens for sliding context
+    context: List[ChatMessage] = field(default_factory=list)
+    token_count: int = 0  # Current token count
+    current_expert: Optional[ExpertLLM] = None  # Track the current expert
+
+@dataclass
+class Conversation:
+    conversation_id: str
+    user_id: str
+    messages: List[ChatMessage] = field(default_factory=list)
+    created_at: datetime.datetime = field(default_factory=datetime.datetime.utcnow)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "conversation_id": self.conversation_id,
+            "user_id": self.user_id,
+            "messages": [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    "expert_used": msg.expert_used,
+                    "expert_version": msg.expert_version,
+                    "timestamp": msg.timestamp.isoformat(),
+                }
+                for msg in self.messages
+            ],
+            "created_at": self.created_at.isoformat(),
+        }
