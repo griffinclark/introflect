@@ -22,7 +22,7 @@ model = ChatAnthropic(
     anthropic_api_key=API_KEY            # Use the API key
 )
 
-def augmented_chat(user_query: str, context: str, output_manager: OutputManager) -> str:
+def get_augmentation_data(user_query: str, context: str, output_manager: OutputManager) -> str:
     """
     Executes the two-step chain:
     1. Uses the LLM to determine tools.
@@ -34,7 +34,7 @@ def augmented_chat(user_query: str, context: str, output_manager: OutputManager)
         output_manager (OutputManager): An instance of OutputManager to handle logging.
 
     Returns:
-        str: The LLM's final response.
+        str: Augmentation data.
     """
     # Step 1: Determine tools using LLM
     try:
@@ -66,18 +66,7 @@ def augmented_chat(user_query: str, context: str, output_manager: OutputManager)
 
     # Step 3: Generate response with data and context
     combined_data = "\n".join([json.dumps(tool.to_dict(), indent=2) for tool in tool_outputs])  # Serialize ToolResponse objects
-    second_llm_prompt = (
-        f"You are the expert listed in your system prompt. "
-        f"Continue this chat. Shoot for an output length of 2-5 sentences. "
-        f"Current Context:\n{context}\n"
-        f"User Query: {user_query}\nCombined Data:\n{combined_data}\n\nGenerate an answer based on the above data."
-    )
-    try:
-        second_llm_response = model.invoke([HumanMessage(content=second_llm_prompt)])
-        return second_llm_response.content
-    except Exception as e:
-        output_manager.log(f"❌ Error generating response: {e}", level="ERROR")
-        raise RuntimeError(f"Error generating response: {e}")
+    return combined_data
 
 
 # CLI Main Loop
@@ -93,7 +82,7 @@ def main():
 
         try:
             # Call the augmented_chat function
-            response = augmented_chat(user_input)
+            response = get_augmentation_data(user_input)
             print("Claude:", response)
         except Exception as e:
             print(f"An error occurred: {e}")
