@@ -6,10 +6,10 @@ from src.functions.api.ezchecklist.ezchecklist_data_handler import get_ezcheckli
 from src.functions.api.whoop.token_manager import WhoopTokenManager
 from src.functions.api.whoop.whoop_data_fetcher import WhoopDataFetcher
 from src.functions.api.notion.notion_data_handler import get_entries_with_content_for_n_days
+from src.interface.output_manager import OutputManager  # Add this import
 from src.utils.firebase.firebase_init import firestore_client
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
-
 
 class ToolResponse:
     def __init__(self, tool_name: str, params: Dict[str, Any], output: Any):
@@ -27,7 +27,7 @@ class ToolResponse:
 
 # Real implementations of tool functions
 
-def execute_tools(raw_tool_choices: str) -> List[ToolResponse]:
+def execute_tools(raw_tool_choices: str, output_manager: OutputManager) -> List[ToolResponse]:
     """
     Executes a list of tools with their respective parameters, taking in raw JSON input.
 
@@ -50,6 +50,7 @@ def execute_tools(raw_tool_choices: str) -> List[ToolResponse]:
         try:
             output = execute_tool(tool_name, params)
             tool_response = ToolResponse(tool_name=tool_name, params=params, output=output)
+            output_manager.log(f"    ✅ Executed tool: {tool_name}")
             results.append(tool_response)
         except Exception as e:
             tool_response = ToolResponse(tool_name=tool_name, params=params, output=f"Error: {str(e)}")
