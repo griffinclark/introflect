@@ -55,34 +55,40 @@ class ExpertSelector:
         debug_changes = split_response[1] if len(split_response) > 1 else "No explanation provided."
         return should_switch, debug_changes
 
-    def select_expert(self, conversation: Conversation, current_expert: Optional[str] = None) -> Tuple[ExpertLLM, str]:
-        """
-        Selects the appropriate expert for the conversation.
+    def select_expert(self, conversation: Conversation, current_expert: Optional[str] = None) -> ExpertLLM:
 
-        Args:
-            conversation (Conversation): The conversation history.
-            current_expert (Optional[str]): The current expert name, if any.
-
-        Returns:
-            Tuple[ExpertLLM, str]: The selected expert and debug_changes string.
-        """
-        debug_changes = ""
         if current_expert:
             last_message = conversation.messages[-1].content if conversation.messages else ""
-            should_switch, debug_switch = self.should_switch_expert(last_message, current_expert)
-            debug_changes += f"Should switch expert: {should_switch}. Reason: {debug_switch}\n"
+            should_switch, reason = self.should_switch_expert(last_message, current_expert)
+            print(f"Should Switch Expert: {should_switch}, Reason: {reason}")
             if not should_switch:
-                # Return the current expert if no switch is needed
-                return get_expert_by_name(current_expert), debug_changes
+                expert_data = get_expert_by_name(current_expert)
+                print(f"Reusing Current Expert Data: {expert_data}")
+                # Ensure the returned expert is an ExpertLLM instance
+                if isinstance(expert_data, tuple):
+                    return ExpertLLM(
+                        template_name=current_expert,
+                        model=expert_data[0],
+                        temperature=expert_data[2],
+                        personality_prompt=expert_data[1],
+                        speaking_instructions="Default speaking instructions",
+                        tone="Default tone",
+                        default_length_preference="Default length",
+                        preferred_vocabulary_complexity="Simple",
+                        default_response_format="Plain text",
+                        when_to_use="Default usage",
+                        version=1
+                    )
+                elif isinstance(expert_data, dict):
+                    return ExpertLLM(**expert_data)
+                else:
+                    raise ValueError(f"Unexpected expert data format: {expert_data}")
 
-        # If no expert or a switch is required, analyze the conversation history
-        messages = [
-            {"role": msg.role, "content": msg.content}
-            for msg in conversation.messages
-        ]
+        # Analyze the conversation history
+        messages = [{"role": msg.role, "content": msg.content} for msg in conversation.messages]
         serialized_history = json.dumps(messages, indent=2)
+        print(f"Serialized History: {serialized_history}")
 
-        # Ensure the token limit is not exceeded
         if self.count_tokens(serialized_history) > 10000:
             raise ValueError("Conversation history exceeds 10,000 tokens.")
 
@@ -94,7 +100,7 @@ class ExpertSelector:
                 "Here is the conversation history (up to 10,000 tokens): \n"
                 "{conversation_history}\n\n"
                 "Here are the available experts and their descriptions: {expert_info}.\n"
-                "Return only the name of the best expert for this conversation and explain your reasoning."
+                "Return only the name of the best expert for this conversation."
             )
         )
 
@@ -103,13 +109,34 @@ class ExpertSelector:
             "conversation_history": serialized_history,
             "expert_info": expert_selection_info
         }).strip()
+        print(f"LLM Response: {response}")
 
-        split_response = response.split("\n", 1)
-        expert_name = split_response[0].strip()
-        debug_reasoning = split_response[1] if len(split_response) > 1 else "No explanation provided."
-        debug_changes += f"Expert selected: {expert_name}. Reason: {debug_reasoning}\n"
+        expert_name = response.split("\n")[0].strip()  # Extract the name of the expert
 
-        return get_expert_by_name(expert_name), debug_changes
+        # Fetch expert data
+        expert_data = get_expert_by_name(expert_name)
+
+        # Ensure the returned expert is an ExpertLLM instance
+        if isinstance(expert_data, tuple):
+            selected_expert = ExpertLLM(
+                template_name=expert_name,
+                model=expert_data[0],
+                temperature=expert_data[2],
+                personality_prompt=expert_data[1],
+                speaking_instructions="Default speaking instructions",
+                tone="Default tone",
+                default_length_preference="Default length",
+                preferred_vocabulary_complexity="Simple",
+                default_response_format="Plain text",
+                when_to_use="Default usage",
+                version=1
+            )
+        elif isinstance(expert_data, dict):
+            selected_expert = ExpertLLM(**expert_data)
+        else:
+            raise ValueError(f"Unexpected expert data format: {expert_data}")
+
+        return selected_expert
 
 # Example usage
 if __name__ == "__main__":
