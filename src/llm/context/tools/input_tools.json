@@ -98,5 +98,19 @@
       "May not cover all aspects of user personality"
     ],
     "credibility_score": "MEDIUM"
-  }
+  },
+  "Get Basic User Info": {
+  "description": "Retrieve foundational user data such as name, age, gender, location, occupation, languages spoken, favorite books and movies, pets, and cultural/religious identity.",
+  "parameters": { "uid": "string" },
+  "use_cases": [
+    "Understanding core user identity",
+    "Tailoring recommendations and responses",
+    "Providing context-aware assistance"
+  ],
+  "limitations": [
+    "Only retrieves static user information",
+    "Depends on accurate and complete data in Firestore"
+  ],
+  "credibility_score": "HIGH"
+}
 }

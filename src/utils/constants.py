@@ -195,3 +195,28 @@ class Conversation:
             ],
             "created_at": self.created_at.isoformat(),
         }
+
+@dataclass
+class User:
+    uid: str  # Unique identifier for the user
+    name: str  # Full name
+    age: int  # Age stored as a number
+    gender: str  # Gender of the user
+    location: str  # User's location or description of where they live
+    occupation: str  # User's current or past occupation
+    favorite_books_and_movies: Dict[str, str]  # Map of titles to reasons why they are favorite
+    pets: Dict[str, str]  # Map of pet names to descriptions
+    languages_spoken: List[str]  # List of languages the user speaks
+    cultural_religious_identity: str  # Cultural and religious identity description
+    secrets: Dict[str, str] = field(default_factory=dict)  # Map of secrets like API keys, tokens, etc.
+
+    def __post_init__(self):
+        # Validation to ensure types match expectations
+        if not isinstance(self.favorite_books_and_movies, dict):
+            raise TypeError("favorite_books_and_movies must be a dictionary of title: reason pairs.")
+        if not isinstance(self.pets, dict):
+            raise TypeError("pets must be a dictionary of pet names and descriptions.")
+        if not isinstance(self.languages_spoken, list):
+            raise TypeError("languages_spoken must be a list of strings.")
+        if not isinstance(self.secrets, dict):
+            raise TypeError("secrets must be a dictionary of key-value pairs.")

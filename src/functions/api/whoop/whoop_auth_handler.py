@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from urllib.parse import urlencode, urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
-from src.utils.firebase.firestore.user_secrets_manager import crud_user_secret
+from src.utils.firebase.firestore.user_manager import crud_user_secret
 
 # Load environment variables from .env
 load_dotenv()
