@@ -209,6 +209,8 @@ class User:
     languages_spoken: List[str]  # List of languages the user speaks
     cultural_religious_identity: str  # Cultural and religious identity description
     secrets: Dict[str, str] = field(default_factory=dict)  # Map of secrets like API keys, tokens, etc.
+    social_graph_chimps: List[str] = field(default_factory=list)  # Array of chimp UIDs
+
 
     def __post_init__(self):
         # Validation to ensure types match expectations
@@ -220,3 +222,12 @@ class User:
             raise TypeError("languages_spoken must be a list of strings.")
         if not isinstance(self.secrets, dict):
             raise TypeError("secrets must be a dictionary of key-value pairs.")
+
+@dataclass
+class Chimp:
+    uid: str  # Unique identifier for the chimp
+    name: str  # Full name of the chimp
+    approx_age: int  
+    how_we_met: str  # How the relationship started
+    why_the_relationship_matters: str  # Importance of the relationship
+    one_story: str  # A meaningful or memorable story about the chimp
