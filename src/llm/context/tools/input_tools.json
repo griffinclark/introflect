@@ -98,5 +98,37 @@
       "May not cover all aspects of user personality"
     ],
     "credibility_score": "MEDIUM"
+  },
+  "Get Basic User Info": {
+    "description": "Use if not yet used - great baseline. Retrieve foundational user data such as name, age, gender, location, occupation, languages spoken, favorite books and movies, pets, and cultural/religious identity.",
+    "parameters": { "uid": "string" },
+    "use_cases": [
+      "Use if not yet used",
+      "Understanding core user identity",
+      "Tailoring recommendations and responses",
+      "Providing context-aware assistance"
+    ],
+    "limitations": [
+      "Only retrieves static user information",
+      "Depends on accurate and complete data in Firestore"
+    ],
+    "credibility_score": "HIGH"
+  },
+
+  "Get Far Horizon Context": {
+    "description": "Retrieve the user's Far-Horizon Context, a reflective document containing their mission statement, biggest ambitions, current struggles, and dream for humanity. This tool is essential for understanding the user's long-term goals, challenges, and values to provide meaningful and aligned assistance.",
+    "parameters": {},
+    "use_cases": [
+      "Aligning short-term recommendations with long-term goals",
+      "Providing empathetic responses tailored to the user's struggles",
+      "Incorporating the user's mission and values into advice",
+      "Understanding the user's overarching life philosophy for better guidance"
+    ],
+    "limitations": [
+      "Depends on the user maintaining and updating the Far-Horizon Context document",
+      "Retrieves only the most recent document with the title 'Far-Horizon Context'",
+      "May not reflect sudden or recent changes in the user's circumstances"
+    ],
+    "credibility_score": "HIGH"
   }
 }

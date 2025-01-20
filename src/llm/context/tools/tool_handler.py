@@ -5,11 +5,12 @@ from typing import Dict, Any, List
 from src.functions.api.ezchecklist.ezchecklist_data_handler import get_ezchecklist_data_for_days
 from src.functions.api.whoop.token_manager import WhoopTokenManager
 from src.functions.api.whoop.whoop_data_fetcher import WhoopDataFetcher
-from src.functions.api.notion.notion_data_handler import get_entries_with_content_for_n_days
+from src.functions.api.notion.notion_data_handler import get_entries_with_content_for_n_days, get_far_horizon_context
 from src.interface.output_manager import OutputManager  # Add this import
 from src.utils.firebase.firebase_init import firestore_client
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
+from src.llm.context.tools.tool_implementations.get_basic_user_info import get_basic_user_info
 
 class ToolResponse:
     def __init__(self, tool_name: str, params: Dict[str, Any], output: Any):
@@ -77,9 +78,13 @@ def execute_tool(tool_name: str, params: Dict[str, Any]) -> str:
         elif tool_name == "EZChecklist Data":
             num_days = params.get("num_days", 7)
             return get_ezchecklist_data_for_days(num_days)
+        elif tool_name == "Get Basic User Info":
+            return get_basic_user_info("g") # TODO this is hardcoded
         elif tool_name == "Morning Journaling Exercises":
             num_days = params.get("num_days", 7)
             return get_entries_with_content_for_n_days(num_days)
+        elif tool_name == "Get Far Horizon Context":
+            return get_far_horizon_context()
         elif tool_name == "Read Personality Profile":
             # get the user's personality profile from Firestore
             doc_ref = firestore_client.collection(

@@ -1,5 +1,5 @@
 import threading
-from src.utils.firebase.firestore.user_secrets_manager import crud_user_secret
+from src.utils.firebase.firestore.user_manager import crud_user_secret
 import requests
 import time
 
