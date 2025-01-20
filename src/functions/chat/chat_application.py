@@ -95,7 +95,7 @@ class ChatApplication:
 
         # Build the prompt template with LangChain
         prompt = f"""
-            You are an AI system acting as the expert: {selected_expert.template_name}.
+            You are an AI system acting as the expert: {selected_expert.template_name}. Do not talk about yourself or your prompting - just respond in 2-5 sentences (unless you specifically need a longer output)
             Your role is to provide responses based on the following personality traits and instructions:
             - Personality: {selected_expert.personality_prompt}
             - Speaking Style: {selected_expert.speaking_instructions}
