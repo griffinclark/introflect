@@ -31,8 +31,7 @@ class ChatApplication:
             user_id=user_id, max_tokens=max_context_tokens)
         self.chat_helper = ChatHelper()
         self.expert_selector = ExpertSelector()  # Initialize ExpertSelector
-        self.conversation_id = f"conversation_{user_id}_{
-            datetime.datetime.now(datetime.timezone.utc).isoformat()}"
+        self.conversation_id = f"conversation_{user_id}_{datetime.datetime.now(datetime.timezone.utc).isoformat()}"
         self.chat_context.current_expert = None  # Initialize current expert
         self.output_manager = OutputManager(debug=debug)
 

@@ -36,7 +36,8 @@ class OutputManager:
             title (str): The title of the section.
             content (str): The content to log, formatted with indents.
         """
-        self.log(f"🔍 {title}:\n    {content.replace('\n', '\n    ')}")
+        indented_content = content.replace('\n', '\n    ')
+        self.log(f"🔍 {title}:\n    {indented_content}")
 
     def log_with_emojis(self, title: str, details: dict):
         """
