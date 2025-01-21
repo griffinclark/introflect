@@ -1,19 +1,20 @@
 import time
 
+
 class OutputManager:
     def __init__(self, debug: bool = False):
         """
-        Initializes the OutputManager with an optional debug flag.
+        Initializes the OutputManager.
 
         Args:
             debug (bool): If True, includes timestamp and message level in logs.
         """
         self.logs = []
-        self.debug = debug  # Determines whether to include debug information
+        self.debug = debug  # Enables detailed logs
 
     def log(self, message: str, level: str = "INFO"):
         """
-        Log a message with optional timestamp and level, based on debug flag.
+        Log a message with optional timestamp and level.
 
         Args:
             message (str): The message to log.
@@ -25,8 +26,11 @@ class OutputManager:
         else:
             formatted_message = message
 
+        # Store in logs
         self.logs.append(formatted_message)
-        print(formatted_message)  # Print in real-time
+
+        # Output to console
+        self._log_to_console(formatted_message)
 
     def log_section(self, title: str, content: str):
         """
@@ -51,7 +55,7 @@ class OutputManager:
         for key, value in details.items():
             self.log(f"    {key}: {value}")
 
-    def dump_logs(self):
+    def dump_logs(self) -> str:
         """
         Dump all logs for debugging.
 
@@ -59,3 +63,12 @@ class OutputManager:
             str: All logged messages joined by newlines.
         """
         return "\n".join(self.logs)
+
+    def _log_to_console(self, message: str):
+        """
+        Log a message to the console.
+
+        Args:
+            message (str): The message to log.
+        """
+        print(message)

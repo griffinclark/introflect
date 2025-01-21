@@ -7,6 +7,7 @@ from src.utils.firebase.firestore.chat_helper import ChatHelper
 from src.llm.intelligence.mixture_of_experts.select_expert import ExpertSelector
 from src.interface.output_manager import OutputManager
 from langchain_anthropic import ChatAnthropic
+from typing import Optional
 import os
 from langchain_core.messages import HumanMessage
 
@@ -19,16 +20,19 @@ if not API_KEY:
 
 
 class ChatApplication:
-    def __init__(self, user_id: str, max_context_tokens: int = 1000, debug: bool = False):
+    def __init__(self, user_id: str, max_context_tokens: int = 10000, debug: bool = False):
         """
         Initializes the ChatApplication with a ChatContext and ExpertSelector.
 
         Args:
             user_id (str): Unique identifier for the user.
             max_context_tokens (int): Maximum number of tokens for the context window.
+            telegram_chat_id (str, optional): Telegram chat ID for real-time updates.
+            telegram_bot_token (str, optional): Telegram bot token for API access.
         """
         self.chat_context = ChatContext(
             user_id=user_id, max_tokens=max_context_tokens)
+        self.debug = debug
         self.chat_helper = ChatHelper()
         self.expert_selector = ExpertSelector()  # Initialize ExpertSelector
         self.conversation_id = f"conversation_{user_id}_{datetime.datetime.now(datetime.timezone.utc).isoformat()}"
@@ -76,11 +80,17 @@ class ChatApplication:
                 f"Error: select_expert must return an ExpertLLM instance, got {type(selected_expert)}",
                 level="ERROR"
             )
-            raise ValueError(f"select_expert must return an ExpertLLM instance, got {type(selected_expert)}")
+            raise ValueError(
+                f"select_expert must return an ExpertLLM instance, got {type(selected_expert)}")
 
-        # Log the reasoning for selecting the expert
-        self.output_manager.log(f"🤔 Expert Selection: {selected_expert.template_name}")
-        self.output_manager.log(f"🧠 Expert Reasoning: {debug_reasoning}")
+        # Log the reasoning for selecting the expert if we're not using telegram
+
+        if not self.debug:
+            self.output_manager.log(
+                f"🤔 Expert Selection: {selected_expert.template_name}")
+            self.output_manager.log(f"🧠 Expert Reasoning: {debug_reasoning}")
+        else:
+            self.output_manager.log(selected_expert.template_name + ": ")
 
         # Update the current expert in the context
         self.chat_context.current_expert = selected_expert
@@ -122,7 +132,7 @@ class ChatApplication:
 
         # Generate response using Claude
         model = ChatAnthropic(
-            model="claude-3-5-sonnet-20241022", 
+            model="claude-3-5-sonnet-20241022",
             temperature=selected_expert.temperature or 0.7,
             anthropic_api_key=API_KEY
         )
@@ -134,7 +144,11 @@ class ChatApplication:
         response_content = response.content.strip()
 
         # Log the assistant's response
-        self.output_manager.log(f"\n💬 {self.chat_context.current_expert.template_name}: {response_content}")
+        if self.debug:
+            self.output_manager.log(
+                f"\n💬 {self.chat_context.current_expert.template_name}: {response_content}")
+        else:
+            self.output_manager.log(response_content)
 
         # Add assistant response to context
         self.add_message_to_context(
