@@ -11,7 +11,7 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN: Final = os.getenv("TELEGRAM_BOT_TOKEN")
 BOT_USERNAME: Final = os.getenv("TELEGRAM_BOT_USERNAME")
-chat_app = ChatApplication(user_id="g", max_context_tokens=10000, debug=False)
+chat_app = ChatApplication(user_id="g", conversation_id="g_telegram_chat", max_context_tokens=10000, debug=False)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -37,8 +37,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         response = f"An error occurred: {str(e)}"
     
-    print('Bot:', response)
-
     # Edit the "Thinking..." message with the actual response
     await thinking_message.edit_text(response)
 

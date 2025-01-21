@@ -20,7 +20,7 @@ if not API_KEY:
 
 
 class ChatApplication:
-    def __init__(self, user_id: str, max_context_tokens: int = 10000, debug: bool = False):
+    def __init__(self, user_id: str, conversation_id: str = '', max_context_tokens: int = 10000, debug: bool = False):
         """
         Initializes the ChatApplication with a ChatContext and ExpertSelector.
 
@@ -35,9 +35,23 @@ class ChatApplication:
         self.debug = debug
         self.chat_helper = ChatHelper()
         self.expert_selector = ExpertSelector()  # Initialize ExpertSelector
-        self.conversation_id = f"conversation_{user_id}_{datetime.datetime.now(datetime.timezone.utc).isoformat()}"
-        self.chat_context.current_expert = None  # Initialize current expert
+        if conversation_id != '':
+            self.conversation_id = conversation_id
+        else:
+            self.conversation_id = f"conversation_{user_id}_{datetime.datetime.now(datetime.timezone.utc).isoformat()}"
+        self.chat_context.current_expert = None 
         self.output_manager = OutputManager(debug=debug)
+
+        try:
+            existing_conversation = self.chat_helper.load_conversation(self.conversation_id)
+            self.chat_context.context = existing_conversation.messages
+            self.chat_context.token_count = sum(
+                len(msg.content.split()) for msg in existing_conversation.messages
+            )
+            selected_expert = self.expert_selector.select_expert(existing_conversation)
+            self.chat_context.current_expert = selected_expert  # Assign the ExpertLLM instance
+        except ValueError:
+            self.output_manager.log("No existing conversation found. Starting fresh.", level="INFO")
 
         # Attempt to load an existing conversation
         try:
@@ -70,7 +84,7 @@ class ChatApplication:
         )
 
         # Call select_expert and log its result
-        selected_expert, debug_reasoning = self.expert_selector.select_expert(
+        selected_expert = self.expert_selector.select_expert(
             conversation,
             current_expert=self.chat_context.current_expert.template_name if self.chat_context.current_expert else None
         )
@@ -81,16 +95,8 @@ class ChatApplication:
                 level="ERROR"
             )
             raise ValueError(
-                f"select_expert must return an ExpertLLM instance, got {type(selected_expert)}")
-
-        # Log the reasoning for selecting the expert if we're not using telegram
-
-        if not self.debug:
-            self.output_manager.log(
-                f"🤔 Expert Selection: {selected_expert.template_name}")
-            self.output_manager.log(f"🧠 Expert Reasoning: {debug_reasoning}")
-        else:
-            self.output_manager.log(selected_expert.template_name + ": ")
+                f"select_expert must return an ExpertLLM instance, got {type(selected_expert)}"
+            )
 
         # Update the current expert in the context
         self.chat_context.current_expert = selected_expert
@@ -144,19 +150,17 @@ class ChatApplication:
         response_content = response.content.strip()
 
         # Log the assistant's response
-        if self.debug:
-            self.output_manager.log(
-                f"\n💬 {self.chat_context.current_expert.template_name}: {response_content}")
-        else:
-            self.output_manager.log(response_content)
+        self.output_manager.log(
+            f"{response_content}\n-{selected_expert.template_name} ")
 
         # Add assistant response to context
         self.add_message_to_context(
             "assistant",
             response_content,
-            expert_used=self.chat_context.current_expert.template_name,
-            expert_version=self.chat_context.current_expert.version
+            expert_used=selected_expert.template_name,
+            expert_version=selected_expert.version
         )
+
 
     def add_message_to_context(self, role: str, content: str, expert_used: str = "general", expert_version: int = 1):
         """
@@ -224,7 +228,7 @@ def main():
 
     user_id = "g"  # Replace with a dynamic user ID as needed
     # Adjust token limit as needed
-    chat_app = ChatApplication(user_id=user_id, max_context_tokens=1000)
+    chat_app = ChatApplication(user_id="g", conversation_id="g_telegram_chat", max_context_tokens=10000, debug=False)
 
     while True:
         user_input = input("\nYou 🧑‍💻: ")
