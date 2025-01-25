@@ -126,7 +126,7 @@ class ExpertSelector:
                 debug_changes = f"Reusing current expert: {current_expert}. Reason: {reasoning}\n"
                 expert_data = get_expert_by_name(current_expert)
                 selected_expert = convert_to_expertLLM(expert_data, current_expert)
-                return selected_expert, debug_changes
+                return selected_expert
 
             # Log reasoning for switching experts
             debug_changes = f"Switching expert from {current_expert} to a better-suited one. Reason: {reasoning}\n"
@@ -166,9 +166,7 @@ class ExpertSelector:
         expert_data = get_expert_by_name(expert_name)
         selected_expert = convert_to_expertLLM(expert_data, expert_name)
         debug_changes += f"Selected new expert: {expert_name}\n"
-        return selected_expert, debug_changes
-
-
+        return selected_expert
 
 # Example usage
 if __name__ == "__main__":

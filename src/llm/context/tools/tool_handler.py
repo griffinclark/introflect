@@ -2,10 +2,10 @@
 import os
 import json
 from typing import Dict, Any, List
-from src.functions.api.ezchecklist.ezchecklist_data_handler import get_ezchecklist_data_for_days
-from src.functions.api.whoop.token_manager import WhoopTokenManager
-from src.functions.api.whoop.whoop_data_fetcher import WhoopDataFetcher
-from src.functions.api.notion.notion_data_handler import get_entries_with_content_for_n_days, get_far_horizon_context
+from src.llm.context.tools.ezchecklist.ezchecklist_data_handler import get_ezchecklist_data_for_days
+from src.llm.context.tools.whoop.token_manager import WhoopTokenManager
+from src.llm.context.tools.whoop.whoop_data_fetcher import WhoopDataFetcher
+from src.llm.context.tools.notion.notion_data_handler import get_entries_with_content_for_n_days, get_far_horizon_context
 from src.interface.output_manager import OutputManager  # Add this import
 from src.utils.firebase.firebase_init import firestore_client
 from langchain_anthropic import ChatAnthropic

@@ -140,7 +140,6 @@ class LLMTool:
     limitations: List[str]  # List of limitations
     credibility_score: str  # Credibility score (HIGH, MEDIUM, LOW)
 
-
 @dataclass
 class ExpertLLM:
     template_name: str
@@ -154,7 +153,6 @@ class ExpertLLM:
     default_response_format: str # should they be biased towards responding with quotes, poetry, bullet points, data, etc.?
     when_to_use: str # a description for our selector LLM to know when to use this expert
     version: int
-
 
 @dataclass
 class ChatMessage:

@@ -3,7 +3,7 @@ from src.utils.constants import WHOOPRecovery, WHOOPWorkout, WHOOPSleep, WHOOPCy
 from typing import List, Union
 import requests
 
-from src.functions.api.whoop.token_manager import WhoopTokenManager
+from src.llm.context.tools.whoop.token_manager import WhoopTokenManager
 
 
 class WhoopDataFetcher:
